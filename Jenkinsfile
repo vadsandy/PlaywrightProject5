@@ -66,7 +66,7 @@ pipeline {
                 script {
                     // Injecting parameters into the command
                     // We join multiple tags with 'or' for Cucumber
-                    def tagExpression = params.TAGS.replaceAll(',', 'or')
+                    def tagExpression = params.TAGS.replaceAll(',', ' or ')
                     // 2. Prepare Feature Paths
                     // We prefix each selection with the base folder path
                     def featurePaths = params.FEATURES.split(',').collect {"src/features/${it}"}.join(' ')
@@ -101,7 +101,7 @@ pipeline {
         always {
             // Dynamically create the environment.properties for Allure
             script {
-                def props = "Environment=${params.ENVIRONMENT}\nBrowsers=${params.BROWSERS}\nTags=${params.TAGS}"
+                def props = "Environment=${params.ENVIRONMENT}\nBrowsers=${params.BROWSERS}\nTags=${params.TAGS}\nHeadless=${params.HEADLESS}\nBuild=${env.BUILD_NUMBER}"
                 writeFile file: 'allure-results/environment.properties', text: props
             }
             allure includeProperties: false, results: [[path: 'allure-results']]
