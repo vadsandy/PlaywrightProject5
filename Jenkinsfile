@@ -40,16 +40,22 @@ pipeline {
         }
         stage('Execute Tests') {
             steps {
-                script {
-                    def tagExpression = params.TAGS.replaceAll(',', ' or ')
-                    def featurePaths = params.FEATURES.split(',').collect {"src/features/\${it}"}.join(' ')
-                    def browserList = params.BROWSERS.split(',')
-                    for (browser in browserList) {
-                        withEnv(["TARGET_ENV=\${params.ENVIRONMENT}", "BROWSER=\${browser.trim()}", "HEADLESS=\${params.HEADLESS}"]) {
-                            sh "npx cucumber-js --tags '\${tagExpression}' \${featurePaths} || true"
+                withCredentials([
+                    string(credentialsId: 'SQL_USER', variable: 'DB_USER'),
+                    string(credentialsId: 'SQL_PASSWORD', variable: 'DB_PASSWORD')
+                ]) {
+                    script {
+                        def tagExpression = params.TAGS.replaceAll(',', ' or ')
+                        def featurePaths = params.FEATURES.split(',').collect {"src/features/\${it}"}.join(' ')
+                        def browserList = params.BROWSERS.split(',')
+                        for (browser in browserList) {
+                            withEnv(["TARGET_ENV=\${params.ENVIRONMENT}", "BROWSER=\${browser.trim()}", "HEADLESS=\${params.HEADLESS}"]) {
+                                sh "npx cucumber-js --tags '\${tagExpression}' \${featurePaths} || true"
+                            }
                         }
                     }
                 }
+                
             }
         }
     }

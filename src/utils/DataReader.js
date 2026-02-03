@@ -59,13 +59,13 @@ class DataReader {
         const config = {
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
-            server: process.env.DB_SERVER,
-            database: process.env.DB_NAME,
+            server: 'localhost',
+            database: 'PlaywrightTestData',
             port: parseInt(process.env.DB_PORT) || 1433,
             options: {
                 encrypt: false, // Set to false for local SQL
                 trustServerCertificate: true,
-                instanceName: process.env.DB_INSTANCE
+                //instanceName: process.env.DB_INSTANCE
             }
         };
         const pool = await mssql.connect(config);
