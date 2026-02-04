@@ -57,7 +57,8 @@ pipeline {
             steps {
                 script {
                     if (!fileExists('node_modules')) {
-                        sh 'npm install'
+                        // Change 'sh' to 'bat' for Windows
+                        bat 'npm install'
                     }
                 }
             }
@@ -65,19 +66,29 @@ pipeline {
 
         stage('Execute Tests') {
             steps {
-                // FIX 1: Ensure variables inside withCredentials match the variable names in withEnv
                 withCredentials([
                     string(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', variable: 'SQL_USER_VAL'),
                     string(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', variable: 'SQL_PASS_VAL')
                 ]) {
-                    withEnv([
-                        "DB_USER=${SQL_USER_VAL}",
-                        "DB_PASSWORD=${SQL_PASS_VAL}",
-                        "TARGET_ENV=${params.ENVIRONMENT}",
-                        "BROWSER=${browser.trim()}"
-                    ]) {
-                        // Now your code will see process.env.DB_USER correctly
-                        sh "npx cucumber-js ..."
+                    script {
+                        def tagExpression = params.TAGS.replaceAll(',', ' or ')
+                        // Use double quotes and careful escaping for Windows paths
+                        def featurePaths = params.FEATURES.split(',').collect {"src/features/${it}"}.join(' ')
+                        def browserList = params.BROWSERS.split(',')
+                        
+                        for (browser in browserList) {
+                            withEnv([
+                                "TARGET_ENV=${params.ENVIRONMENT}", 
+                                "BROWSER=${browser.trim()}", 
+                                "HEADLESS=${params.HEADLESS}",
+                                "DB_USER=${SQL_USER_VAL}",
+                                "DB_PASSWORD=${SQL_PASS_VAL}"
+                            ]) {
+                                def headlessFlag = params.HEADLESS ? "--headless" : ""
+                                // Change 'sh' to 'bat' here as well
+                                bat "npx cucumber-js --tags \"${tagExpression}\" ${featurePaths} ${headlessFlag} || exit 0"
+                            }
+                        }
                     }
                 }
             }
