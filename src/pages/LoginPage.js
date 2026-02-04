@@ -17,14 +17,25 @@ class LoginPage {
     }
 
     async navigate() {
-        // Fallback logic: if process.env.TARGET_ENV is undefined, use 'Production'
-        const env = process.env.TARGET_ENV || 'Production';
-        // Safety check: if an invalid env is passed, default to Production
-        const config = envConfig[env] || envConfig['Production'];
+        // 1. Get raw env from process
+        const rawEnv = process.env.TARGET_ENV || 'Production';
+        
+        // 2. Normalize it (e.g., if Jenkins sends 'qa', change to 'QA')
+        // We match it against our keys: Production, QA, Staging
+        let env = 'Production';
+        if (rawEnv.toLowerCase() === 'qa') env = 'QA';
+        if (rawEnv.toLowerCase() === 'staging') env = 'Staging';
+        if (rawEnv.toLowerCase() === 'production') env = 'Production';
+
+        // 3. Select the config
+        const config = envConfig[env];
+
+        if (!config) {
+            throw new Error(`Environment config for "${env}" not found! Check envConfig.js`);
+        }
 
         const targetUrl = `${config.webUrl}/login`;
-
-        console.log(`Navigating to: ${targetUrl}(Environment: ${env})`);
+        console.log(`Navigating to: ${targetUrl} (Environment: ${env})`);
 
         await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000});
     }

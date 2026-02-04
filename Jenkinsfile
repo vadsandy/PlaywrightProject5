@@ -12,19 +12,16 @@ pipeline {
                     sandbox: true, 
                     script: """
                         def list = []
-                        // We use a simpler way to find the workspace that avoids the 'absolutePath' security block
-                        def baseDir = new File('.').getCanonicalFile().getParentFile().getParentFile()
-                        def featurePath = new File(baseDir, "workspace/oject5-Automation-Suite_dev-test/src/features")
+                        // This targets the specific folder on your C: drive directly
+                        def featureDir = new File("C:/ProgramData/Jenkins/.jenkins/workspace/oject5-Automation-Suite_dev-test/src/features")
                         
-                        if(featurePath.exists()){
-                            featurePath.eachFile { file ->
+                        if(featureDir.exists()){
+                            featureDir.eachFile { file ->
                                 if(file.name.endsWith('.feature')) list.add(file.name)
                             }
                             return list.sort()
-                        } else {
-                            // This will show as a checkbox label so you can see where it's looking
-                            return ["Path not found: " + featurePath.getPath()]
                         }
+                        return ["Folder not found at: " + featureDir.absolutePath]
                     """
                 ]
             ]
@@ -34,15 +31,22 @@ pipeline {
         stage('Install') { steps { bat 'npm install' } }
         stage('Execute Tests') {
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', usernameVariable: 'U1', passwordVariable: 'SQL_USER_VAL'),
-                    usernamePassword(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', usernameVariable: 'U2', passwordVariable: 'SQL_PASS_VAL')
-                ]) {
-                    script {
-                        def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        withEnv(["TARGET_ENV=${params.ENVIRONMENT}", "BROWSER=chromium", "HEADLESS=${params.HEADLESS}", "DB_USER=${SQL_USER_VAL}", "DB_PASSWORD=${SQL_PASS_VAL}"]) {
-                            bat "npx cucumber-js src/features/*.feature --tags \"${tagExpression}\" --format progress"
-                        }
+                script {
+                    // Clean tags: default to @UI if nothing is selected
+                    def selectedTags = params.TAGS ?: "@UI"
+                    def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                    
+                    // Clean features: default to all if nothing selected
+                    def selectedFeatures = params.FEATURES ? params.FEATURES.split(',').join(' src/features/') : '*.feature'
+                    def featurePath = "src/features/" + selectedFeatures
+
+                    withEnv([
+                        "TARGET_ENV=${params.ENVIRONMENT}", 
+                        "BROWSER=chromium", 
+                        "HEADLESS=${params.HEADLESS}"
+                    ]) {
+                        // We use double quotes to allow Groovy variable interpolation
+                        bat "npx cucumber-js ${featurePath} --tags \"${tagExpression}\" --format progress"
                     }
                 }
             }

@@ -13,5 +13,7 @@ const envConfig = {
         webUrl: 'https://staging.demoqa.com',
         apiUrl: 'https://staging-api.demoqa.com/v1'
     },
+};
 
-}
+// This allows the { envConfig } destructuring in LoginPage.js to work
+module.exports = { envConfig };
