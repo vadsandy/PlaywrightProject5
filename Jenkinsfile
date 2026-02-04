@@ -31,19 +31,21 @@ pipeline {
         stage('Execute Tests') {
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', usernameVariable: 'SQL_USER_VAL', passwordVariable: 'SQL_PASS_VAL'),
-                    usernamePassword(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', usernameVariable: 'SQL_USER_VAL2', passwordVariable: 'SQL_PASS_VAL2')
+                    usernamePassword(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', 
+                                    usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        // Ensure tags are cleaned
+                        def rawTags = params.TAGS ?: "@UI"
+                        def tagExpression = rawTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         
                         withEnv([
                             "TARGET_ENV=${params.ENVIRONMENT}", 
-                            "BROWSER=chromium", 
-                            "HEADLESS=${params.HEADLESS}",
-                            "DB_USER=${SQL_USER_VAL}",      // Ensure your DataReader uses DB_USER
-                            "DB_PASSWORD=${SQL_PASS_VAL}"  // Ensure your DataReader uses DB_PASSWORD
+                            "DB_USER=" + U_VAL,      // Concatenation is safer in some Jenkins versions
+                            "DB_PASSWORD=" + P_VAL, 
+                            "DB_SERVER=localhost"
                         ]) {
+                            // Use double quotes for the whole string so tagExpression is injected
                             bat "npx cucumber-js src/features/*.feature --tags \"${tagExpression}\" --format progress"
                         }
                     }
