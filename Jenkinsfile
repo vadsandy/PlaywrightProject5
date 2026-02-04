@@ -11,23 +11,19 @@ pipeline {
                 script: [
                     sandbox: true, 
                     script: """
-                        try {
-                            // This finds the actual folder where Jenkins stored your code
-                            def workspace = new File(".").absolutePath.split('bin')[0] + "workspace/oject5-Automation-Suite_dev-test"
-                            def featurePath = workspace + "/src/features"
-                            def dir = new File(featurePath)
-                            
-                            if(!dir.exists()){
-                                return ["ERROR: Path not found at " + featurePath]
-                            }
-                            
-                            def list = []
-                            dir.eachFile { file ->
+                        def list = []
+                        // We use a simpler way to find the workspace that avoids the 'absolutePath' security block
+                        def baseDir = new File('.').getCanonicalFile().getParentFile().getParentFile()
+                        def featurePath = new File(baseDir, "workspace/oject5-Automation-Suite_dev-test/src/features")
+                        
+                        if(featurePath.exists()){
+                            featurePath.eachFile { file ->
                                 if(file.name.endsWith('.feature')) list.add(file.name)
                             }
-                            return list.isEmpty() ? ["No .feature files found in folder"] : list.sort()
-                        } catch (Exception e) {
-                            return ["Script Error: " + e.message]
+                            return list.sort()
+                        } else {
+                            // This will show as a checkbox label so you can see where it's looking
+                            return ["Path not found: " + featurePath.getPath()]
                         }
                     """
                 ]
@@ -45,7 +41,7 @@ pipeline {
                     script {
                         def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         withEnv(["TARGET_ENV=${params.ENVIRONMENT}", "BROWSER=chromium", "HEADLESS=${params.HEADLESS}", "DB_USER=${SQL_USER_VAL}", "DB_PASSWORD=${SQL_PASS_VAL}"]) {
-                            bat "npx cucumber-js --tags \"${tagExpression}\" src/features || exit 0"
+                            bat "npx cucumber-js src/features/*.feature --tags \"${tagExpression}\" --format progress"
                         }
                     }
                 }
