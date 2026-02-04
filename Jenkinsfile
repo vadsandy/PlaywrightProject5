@@ -8,14 +8,24 @@ pipeline {
         activeChoice(name: 'BROWSERS', choiceType: 'PT_CHECKBOX', description: 'Select Browsers',
             script: [$class: 'GroovyScript', script: [sandbox: true, script: "return ['chromium', 'firefox', 'webkit']"]])
         activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', description: 'Select Features', 
-            script: [$class: 'GroovyScript', script: [sandbox: true, script: """
-                def list = []
-                def dir = new File(jenkins.model.Jenkins.instance.getItem(projectName).getCustomWorkspace() + "\\src\\features")
-                if(dir.exists()){
-                    dir.eachFile { file -> if(file.name.endsWith('.feature')) list.add(file.name) }
-                }
-                return list.sort()
-            """]])
+            script: [
+                $class: 'GroovyScript',
+                script: [
+                    sandbox: true, 
+                    script: """
+                        def list = []
+                        // Use the relative path from the current directory
+                        def featureDir = new File("src/features")
+                        if(featureDir.exists()){
+                            featureDir.eachFile { file ->
+                                if(file.name.endsWith('.feature')) list.add(file.name)
+                            }
+                        }
+                        return list.sort()
+                    """
+                ]
+            ]
+        )
     }
     stages {
         stage('Install') {
