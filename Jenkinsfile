@@ -5,15 +5,34 @@ pipeline {
         booleanParam(name: 'HEADLESS', defaultValue: true, description: 'Run Headless')
         activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', script: [$class: 'GroovyScript', script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@REGRESSION', '@SQL', '@JSON', '@EXCEL', '@fireup']"]])
         activeChoice(name: 'BROWSERS', choiceType: 'PT_CHECKBOX', script: [$class: 'GroovyScript', script: [sandbox: true, script: "return ['chromium', 'firefox', 'webkit']"]])
-        activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', 
-            script: [$class: 'GroovyScript', script: [sandbox: true, script: """
-                def list = []
-                def featureDir = new File(System.getProperty("user.dir") + "/src/features")
-                if(featureDir.exists()){
-                    featureDir.eachFile { f -> if(f.name.endsWith('.feature')) list.add(f.name) }
-                }
-                return list.isEmpty() ? ["No files in: " + featureDir.absolutePath] : list.sort()
-            """]])
+        activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', description: 'Select Features', 
+            script: [
+                $class: 'GroovyScript',
+                script: [
+                    sandbox: true, 
+                    script: """
+                        try {
+                            // This finds the actual folder where Jenkins stored your code
+                            def workspace = new File(".").absolutePath.split('bin')[0] + "workspace/oject5-Automation-Suite_dev-test"
+                            def featurePath = workspace + "/src/features"
+                            def dir = new File(featurePath)
+                            
+                            if(!dir.exists()){
+                                return ["ERROR: Path not found at " + featurePath]
+                            }
+                            
+                            def list = []
+                            dir.eachFile { file ->
+                                if(file.name.endsWith('.feature')) list.add(file.name)
+                            }
+                            return list.isEmpty() ? ["No .feature files found in folder"] : list.sort()
+                        } catch (Exception e) {
+                            return ["Script Error: " + e.message]
+                        }
+                    """
+                ]
+            ]
+        )
     }
     stages {
         stage('Install') { steps { bat 'npm install' } }
