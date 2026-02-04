@@ -57,17 +57,20 @@ class DataReader {
 
     static async getSqlData(query) {
         const config = {
+            // These variable names MUST match the keys in your Jenkinsfile withEnv block
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
-            server: 'localhost',
-            database: 'PlaywrightTestData',
+            server: process.env.DB_SERVER || 'localhost', 
+            database: process.env.DB_NAME || 'PlaywrightTestData',
             port: parseInt(process.env.DB_PORT) || 1433,
             options: {
-                encrypt: false, // Set to false for local SQL
+                encrypt: false,
                 trustServerCertificate: true,
-                //instanceName: process.env.DB_INSTANCE
             }
         };
+        // Log to console so you can see if the user is still empty in Jenkins logs
+        console.log(`Connecting to DB as user: ${config.user} on server: ${config.server}`);
+        
         const pool = await mssql.connect(config);
         const result = await pool.request().query(query);
         await pool.close();

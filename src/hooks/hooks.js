@@ -34,25 +34,26 @@ Before(async function (scenario) {
 });
 
 After(async function (scenario) {
-    const video = this.page.video();
-    const videoPath = video ? await video.path() : null; 
-
-    // Capture screenshot on failure
     if (scenario.result?.status === Status.FAILED) {
+        // 1. Screenshot Logic
         const screenshot = await this.page.screenshot({ fullPage: true }).catch(() => null);
         if (screenshot) {
             this.attach(screenshot, 'image/png');
+        }
+
+        // 2. Video Logic
+        const video = this.page.video();
+        if (video) {
+            const videoPath = await video.path().catch(() => null);
+            if (videoPath && fs.existsSync(videoPath)) {
+                const videoBuffer = fs.readFileSync(videoPath);
+                this.attach(videoBuffer, 'video/webm');
+            }
         }
     }
 
     await this.page.close();
     await this.context.close();
-
-    // Attach video if the test failed
-    if (scenario.result?.status === Status.FAILED && videoPath && fs.existsSync(videoPath)) {
-        const videoBuffer = fs.readFileSync(videoPath);
-        this.attach(videoBuffer, 'video/webm');
-    }
 });
 
 AfterAll(async function () {
