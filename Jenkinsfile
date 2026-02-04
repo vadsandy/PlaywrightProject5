@@ -11,16 +11,28 @@ pipeline {
                 script: [
                     sandbox: true, 
                     script: """
-                        // We use the Windows DIR command to find files - Jenkins Sandbox allows this
-                        def command = "cmd /c dir /b C:\\\\ProgramData\\\\Jenkins\\\\.jenkins\\\\workspace\\\\oject5-Automation-Suite_dev-test\\\\src\\\\features\\\\*.feature"
+                        import hudson.model.*
+                        import hudson.FilePath
+
+                        def list = []
                         try {
-                            def process = command.execute()
-                            process.waitFor()
-                            def output = process.in.text.readLines()
-                            return output.isEmpty() ? ["No features found at path"] : output.sort()
+                            // 1. Get the current job and its workspace
+                            def job = Jenkins.instance.getItemByFullName(projectName)
+                            // 2. Access the workspace path directly through the Jenkins API
+                            def workspace = job.getLastBuild().getWorkspace()
+                            def featureDir = new FilePath(workspace, "src/features")
+
+                            if (featureDir.exists()) {
+                                featureDir.list().each { file ->
+                                    if (file.getName().endsWith(".feature")) {
+                                        list.add(file.getName())
+                                    }
+                                }
+                            }
                         } catch (Exception e) {
-                            return ["Error executing dir command: " + e.message]
+                            return ["Build the project once to initialize workspace"]
                         }
+                        return list.isEmpty() ? ["No features found"] : list.sort()
                     """
                 ]
             ]
