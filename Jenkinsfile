@@ -68,29 +68,31 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', 
-                             usernameVariable: 'DB_USER_IGNORE', 
-                             passwordVariable: 'SQL_USER_VAL'),
+                                    usernameVariable: 'IGNORE_U1', passwordVariable: 'SQL_USER_VAL'),
                     usernamePassword(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', 
-                             usernameVariable: 'DB_PASS_IGNORE', 
-                             passwordVariable: 'SQL_PASS_VAL')
+                                    usernameVariable: 'IGNORE_U2', passwordVariable: 'SQL_PASS_VAL')
                 ]) {
                     script {
-                        def tagExpression = params.TAGS.replaceAll(',', ' or ')
-                        // Use double quotes and careful escaping for Windows paths
-                        def featurePaths = params.FEATURES.split(',').collect {"src/features/${it}"}.join(' ')
+                        // Fix for the &#64; encoding: ensure we are using raw strings
+                        def tagExpression = params.TAGS.replaceAll(',', ' or ').replaceAll('&#64;', '@')
+                        
+                        // Fallback: If FEATURES is empty, use the whole directory
+                        def featurePaths = (params.FEATURES && params.FEATURES != "Select Features") ? 
+                                            params.FEATURES.split(',').collect {"src/features/${it}"}.join(' ') : 
+                                            "src/features/"
+
                         def browserList = params.BROWSERS.split(',')
                         
                         for (browser in browserList) {
                             withEnv([
                                 "TARGET_ENV=${params.ENVIRONMENT}", 
                                 "BROWSER=${browser.trim()}", 
-                                "HEADLESS=${params.HEADLESS}",
+                                "HEADLESS_UI=${params.HEADLESS}", // Pass as variable, not flag
                                 "DB_USER=${SQL_USER_VAL}",
                                 "DB_PASSWORD=${SQL_PASS_VAL}"
                             ]) {
-                                def headlessFlag = params.HEADLESS ? "--headless" : ""
-                                // Change 'sh' to 'bat' here as well
-                                bat "npx cucumber-js --tags \"${tagExpression}\" ${featurePaths} ${headlessFlag} || exit 0"
+                                // Removed --headless from the command line string
+                                bat "npx cucumber-js --tags \"${tagExpression}\" ${featurePaths} || exit 0"
                             }
                         }
                     }
