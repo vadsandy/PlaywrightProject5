@@ -67,8 +67,12 @@ pipeline {
         stage('Execute Tests') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', variable: 'SQL_USER_VAL'),
-                    string(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', variable: 'SQL_PASS_VAL')
+                    usernamePassword(credentialsId: 'b1d7d9ef-d63d-4a56-888b-107002590d90', 
+                             usernameVariable: 'DB_USER_IGNORE', 
+                             passwordVariable: 'SQL_USER_VAL'),
+                    usernamePassword(credentialsId: '7d5ee55f-78fc-42d3-82de-06c20e33dd94', 
+                             usernameVariable: 'DB_PASS_IGNORE', 
+                             passwordVariable: 'SQL_PASS_VAL')
                 ]) {
                     script {
                         def tagExpression = params.TAGS.replaceAll(',', ' or ')
