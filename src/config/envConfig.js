@@ -2,7 +2,7 @@ const envConfig = {
     Production: {
         webUrl: 'https://demoqa.com',
         apiUrl: 'https://api.demoqa.com/v1'
-    }
+    },
     
     QA: {
         webUrl: 'https://qa.demoqa.com',
