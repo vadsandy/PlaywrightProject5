@@ -13,21 +13,16 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // This logic checks BOTH possible workspace locations
-                        def paths = [
-                            "C:/JenkinsAgent/workspace/\${env.JOB_NAME}/src/features",
-                            "C:/ProgramData/Jenkins/.jenkins/workspace/\${env.JOB_NAME}/src/features"
-                        ]
+                        // We look exactly where the UI-Agent stores its files
+                        def workspacePath = "C:/JenkinsAgent/workspace/\${env.JOB_NAME}"
+                        def featureDir = new File(workspacePath + "/src/features")
                         
-                        paths.each { path ->
-                            def featureDir = new File(path)
-                            if(featureDir.exists()){
-                                featureDir.eachFile { f -> 
-                                    if(f.name.endsWith('.feature')) list.add(f.name) 
-                                }
+                        if(featureDir.exists()){
+                            featureDir.eachFile { f -> 
+                                if(f.name.endsWith('.feature')) list.add(f.name) 
                             }
                         }
-                        return list.unique().sort() ?: ["No features found - Run build once"]
+                        return list.sort() ?: ["No features found - Run Build #1 to sync"]
                     """
                 ]
             ]
@@ -62,7 +57,7 @@ pipeline {
                 ]) {
                     script {
                         def selectedTags = params.TAGS ?: "@UI"
-                        def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
                         
                         // IMPORTANT: Force the value to false if unchecked
