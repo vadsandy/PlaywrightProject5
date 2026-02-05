@@ -11,37 +11,37 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // Use the direct absolute path for your specific job workspace
                         def workspacePath = "C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"
                         def featureDir = new File(workspacePath + "/src/features")
-                        
                         if(featureDir.exists()){
-                            featureDir.eachFile { f -> 
-                                if(f.name.endsWith('.feature')) list.add(f.name) 
-                            }
+                            featureDir.eachFile { f -> if(f.name.endsWith('.feature')) list.add(f.name) }
                         }
-                        return list.sort() ?: ["No features found - Run build once to sync code"]
+                        return list.sort() ?: ["No features found"]
                     """
                 ]
             ]
         )
 
-        activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Cucumber Tags', 
+        activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Tags', 
             script: [
                 $class: 'GroovyScript', 
-                script: [
-                    sandbox: true, 
-                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@EXCEL']"
-                ]
+                script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION']"]
             ]
         )
+
+        booleanParam(name: 'HEADLESS_MODE', defaultValue: true, description: 'Run Headless (Uncheck to see browser)')
     }
 
     stages {
         stage('Cleanup') {
             steps {
-                bat 'if exist allure-results rmdir /s /q allure-results'
-                bat 'mkdir allure-results'
+                echo "Cleaning up results directory..."
+                bat """
+                    if exist allure-results rmdir /s /q allure-results
+                    if exist reports rmdir /s /q reports
+                    mkdir allure-results
+                    mkdir reports
+                """
             }
         }
 
@@ -60,10 +60,11 @@ pipeline {
                     script {
                         def selectedTags = params.TAGS ?: "@UI"
                         def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
                         
-                        // Feature selection logic
-                        def featurePath = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
+                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
+                        // ALLURE_RESULTS_DIR tells the reporter exactly where to save JSON files
                         withEnv([
                             "TARGET_ENV=" + params.ENVIRONMENT,
                             "DB_USER=" + U_VAL,
@@ -71,10 +72,13 @@ pipeline {
                             "DB_SERVER=localhost",
                             "DB_NAME=PlaywrightTestData",
                             "DB_PORT=1433",
-                            "DB_INSTANCE=SQLEXPRESS"
+                            "DB_INSTANCE=SQLEXPRESS",
+                            "HEADLESS=" + headlessVal,
+                            "BROWSER=chromium",
+                            "ALLURE_RESULTS_DIR=allure-results"
                         ]) {
-                            // Ensure the command uses the dynamically built featurePath
-                            bat "npx cucumber-js ${featurePath} --tags \"${tagExpression}\" --format progress || exit 0"
+                            echo "Running ${featureFiles} | Headless: ${headlessVal}"
+                            bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress || exit 0"
                         }
                     }
                 }
