@@ -27,24 +27,34 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                // FIXED: This block maps your Jenkins credentials to the ENV variables
                 withCredentials([
                     usernamePassword(credentialsId: 'db_credentials', 
-                                     usernameVariable: 'DB_USER_VAL', 
-                                     passwordVariable: 'DB_PASS_VAL')
+                                    usernameVariable: 'DB_USER_VAL', 
+                                    passwordVariable: 'DB_PASS_VAL')
                 ]) {
                     script {
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
                         
+                        // Using single quotes for the password variable fix the interpolation warning
                         withEnv([
                             "HEADLESS=${headlessVal}", 
                             "TARGET_ENV=${params.ENVIRONMENT}",
                             "DB_USER=${DB_USER_VAL}", 
-                            "DB_PASSWORD=${DB_PASS_VAL}"
+                            "DB_PASSWORD" : "${DB_PASS_VAL}" 
                         ]) {
-                            // Ensure we are passing a file path, not a branch string
                             echo "Running Feature: ${params.SELECTED_FEATURE}"
-                            bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${params.TAGS}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            
+                            // FIXED COMMAND: 
+                            // 1. Added --require to explicitly point to your step definitions
+                            // 2. Added --publish-quiet to clean up logs
+                            bat """
+                            npx cucumber-js "${params.SELECTED_FEATURE}" \
+                            --require src/steps/**/*.js \
+                            --tags "${params.TAGS}" \
+                            --format progress \
+                            --format allure-cucumberjs/reporter \
+                            --publish-quiet
+                            """
                         }
                     }
                 }
