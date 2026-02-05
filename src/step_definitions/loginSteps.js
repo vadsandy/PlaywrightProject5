@@ -44,3 +44,14 @@ Then('I should see a logout button', async function(){
     await expect(this.loginPage.logoutBtn).toBeVisible({ timeout: 5000 });
     await expect(this.loginPage.logoutBtn).toHaveText('Log out');
 });
+
+//---Logout functionality
+When('I click on the Logout button', async function () {
+    // Using the specific DemoQA logout button selector
+    await this.page.locator('#submit:has-text("Log out")').click();
+});
+
+Then('I should see the "Login" header to confirm I am out', async function () {
+    const loginHeader = this.page.locator('h1, h2, .main-header'); 
+    await expect(loginHeader).toContainText('Login');
+});
