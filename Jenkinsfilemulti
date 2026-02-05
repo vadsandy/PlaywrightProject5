@@ -2,26 +2,25 @@ pipeline {
     agent { label 'UI-Agent' }
 
     parameters {
-        // FIXED: Using standard gitParameter syntax for version 2.514.1
         gitParameter(
             name: 'SELECTED_FEATURE', 
             type: 'PT_FILE', 
-            branch: '',
-            defaultValue: 'src/features/login.feature',
             sortMode: 'ASCENDING_SMART',
-            useRepository: "${env.GIT_URL}",
+            defaultValue: 'src/features/login.feature',
+            // Use 'pattern' or 'fileFilter' based on what your UI accepted last
+            fileFilter: 'src/features/.*\\.feature', 
             description: 'Select the feature file'
         )
 
-        // FIXED: Using standard choice instead of extendedChoice to avoid compilation error
-        // You can select multiple tags by holding Ctrl, or we can use a simple string
         choice(
             name: 'TAGS', 
-            choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@UI and @SMOKE'], 
+            choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'], 
             description: 'Select test tags'
         )
 
-        choice(name: 'ENVIRONMENT', choices: ['QA', 'Staging', 'Production'])
+        // Production is now first = Default
+        choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
+        
         booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
     }
 
@@ -29,12 +28,10 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    // Headless handling
                     def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                     withEnv(["HEADLESS=${headlessVal}", "TARGET_ENV=${params.ENVIRONMENT}"]) {
                         echo "Executing: ${params.SELECTED_FEATURE}"
-                        // Executing the selected feature
                         bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${params.TAGS}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                     }
                 }
