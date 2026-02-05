@@ -2,19 +2,24 @@ pipeline {
     agent { label 'UI-Agent' }
 
     parameters {
-        // FIXED: Explicitly forcing PT_FILE and removing branch filters
-        gitParameter(
-            name: 'SELECTED_FEATURE', 
-            type: 'PT_FILE', 
-            defaultValue: 'src/features/login.feature',
-            sortMode: 'ASCENDING_SMART',
-            description: 'SELECT A .FEATURE FILE (Not a branch!)'
-        )
+            gitParameter(
+                name: 'SELECTED_FEATURE', 
+                type: 'PT_FILE', 
+                // Replace with your EXACT repo URL from the Screenshot
+                useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
+                branch: '', // Leaving this blank forces it to look at the whole repo
+                sortMode: 'ASCENDING_SMART',
+                defaultValue: 'src/features/login.feature',
+                description: 'Select the feature file to run'
+            )
 
-        choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
-        choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
-        booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
-    }
+            choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
+            
+            // Defaulting to Production
+            choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
+            
+            booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
+        }
 
     stages {
         stage('Cleanup & Install') {
