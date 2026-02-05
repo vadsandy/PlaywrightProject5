@@ -11,20 +11,22 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // This command asks Git to list files in the features folder without needing a local disk path
-                        def branch = "origin/${fallbackBranch ?: 'main'}" // Or use env.BRANCH_NAME if available
-                        def cmd = "git ls-tree -r --name-only ${branch} src/features/"
-                        def proc = cmd.execute(null, new File("C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"))
-                        proc.waitFor()
-                        
-                        def output = proc.in.text
-                        output.eachLine { line ->
-                            if (line.endsWith(".feature")) {
-                                // Clean up the path to show only the filename
-                                list.add(line.split('/').last())
+                        // We use 'HEAD' because it always refers to the branch Jenkins just checked out
+                        def cmd = "git ls-tree -r --name-only HEAD src/features/"
+                        try {
+                            def proc = cmd.execute(null, new File("C:/JenkinsAgent/workspace/Playwright-Automation-Dev"))
+                            proc.waitFor()
+                            
+                            def output = proc.in.text
+                            output.eachLine { line ->
+                                if (line.endsWith(".feature")) {
+                                    list.add(line.split('/').last())
+                                }
                             }
+                        } catch (Exception e) {
+                            return ["Error fetching features: " + e.message]
                         }
-                        return list.sort() ?: ["No features found - Ensure Git is in System PATH"]
+                        return list.sort() ?: ["No features found in src/features/"]
                     """
                 ]
             ]
