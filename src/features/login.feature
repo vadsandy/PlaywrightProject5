@@ -1,6 +1,6 @@
 Feature: Login Functionality
 
-@fireup
+@UI @fireup @Smoke
 Scenario: Login with hardcoded credentials
     Given I navigate to the login page
     When I enter username "testuser1" and password "Test@123"
