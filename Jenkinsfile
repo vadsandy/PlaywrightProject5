@@ -11,21 +11,19 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // Use the built-in Jenkins variable for the current job's workspace
-                        def workspace = jenkins.model.Jenkins.instance.getItem(env.JOB_NAME).lastBuild.workspace
+                        // This command asks Git to list files in the features folder without needing a local disk path
+                        def cmd = "git ls-tree -r --name-only origin/dev-test src/features/"
+                        def proc = cmd.execute(null, new File("C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"))
+                        proc.waitFor()
                         
-                        if (workspace != null && workspace.exists()) {
-                            // This finds all .feature files inside src/features/
-                            def featurePath = workspace.child("src/features")
-                            if (featurePath.exists()) {
-                                featurePath.list().each { file ->
-                                    if (file.name.endsWith(".feature")) {
-                                        list.add(file.name)
-                                    }
-                                }
+                        def output = proc.in.text
+                        output.eachLine { line ->
+                            if (line.endsWith(".feature")) {
+                                // Clean up the path to show only the filename
+                                list.add(line.split('/').last())
                             }
                         }
-                        return list.sort() ?: ["No features found - Run Build #1 to sync code"]
+                        return list.sort() ?: ["No features found - Ensure Git is in System PATH"]
                     """
                 ]
             ]
