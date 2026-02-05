@@ -12,7 +12,8 @@ pipeline {
                     script: """
                         def list = []
                         // This command asks Git to list files in the features folder without needing a local disk path
-                        def cmd = "git ls-tree -r --name-only origin/dev-test src/features/"
+                        def branch = "origin/${fallbackBranch ?: 'main'}" // Or use env.BRANCH_NAME if available
+                        def cmd = "git ls-tree -r --name-only ${branch} src/features/"
                         def proc = cmd.execute(null, new File("C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"))
                         proc.waitFor()
                         
