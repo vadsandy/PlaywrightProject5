@@ -7,12 +7,13 @@ pipeline {
             gitParameter(
                 name: 'SELECTED_FEATURE', 
                 type: 'PT_FILE', 
-                defaultValue: 'src/features/login.feature',
-                // This specific line usually triggers the red warning 
-                // if the plugin can't find the 'SCM' configuration immediately
-                useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
+                // This was the specific setup from our first discussion
                 branch: '', 
                 sortMode: 'ASCENDING_SMART',
+                defaultValue: 'src/features/login.feature',
+                // In the first version, we tried 'filter' or 'pattern'
+                // Jenkins 2.514.1 often flags this in red until the first successful scan
+                useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
                 description: 'Select the feature file'
             )
             
