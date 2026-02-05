@@ -62,7 +62,7 @@ pipeline {
                         // 1. Safe Parameter Handling: Use the Elvis operator (?:) 
                         // to provide a fallback if the parameter is null.
                         def rawSuite = params.TAGS ?: "@fireup"
-                        def featurePath = params.FEATURE_FILE ?: "src/features"
+                        def featurePath = params.FEATURES ? "src/features/${params.FEATURES}" : "src/features"
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                         // 2. Perform the replaceAll on the safe variable
