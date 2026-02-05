@@ -5,12 +5,15 @@ pipeline {
 
             choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
             gitParameter(
-                name: 'FEATURE_FILES', 
+                name: 'SELECTED_FEATURE', 
                 type: 'PT_FILE', 
-                sortMode: 'ASCENDING_SMART',
-                defaultValue: 'src/features',
+                defaultValue: 'src/features/login.feature',
+                // This specific line usually triggers the red warning 
+                // if the plugin can't find the 'SCM' configuration immediately
                 useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
-                description: 'Select/Deselect files. Cucumber will only run those with the tag selected above.'
+                branch: '', 
+                sortMode: 'ASCENDING_SMART',
+                description: 'Select the feature file'
             )
             
             
