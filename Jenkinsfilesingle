@@ -62,18 +62,25 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // Ensure these variables are defined inside the script block
-                        def featurePath = params.FEATURE_FILE ?: 'src/features'
-                        def tagExpr = params.SUITE.replaceAll(',', ' or ')
+                        // 1. Safe Parameter Handling: Use the Elvis operator (?:) 
+                        // to provide a fallback if the parameter is null.
+                        def rawSuite = params.SUITE ?: "@Smoke"
+                        def featurePath = params.FEATURE_FILE ?: "src/features"
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
+
+                        // 2. Perform the replaceAll on the safe variable
+                        def tagExpr = rawSuite.replaceAll(',', ' or ')
 
                         withEnv([
                             "HEADLESS=${headlessVal}",
-                            "TARGET_ENV=${params.ENVIRONMENT}",
+                            "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            // CRUCIAL: Use double quotes (") for the bat command, not single quotes (')
+                            echo "Executing: ${featurePath} with tags: ${tagExpr}"
+                            
+                            // 3. CRITICAL: Use Double Quotes (") for the whole string 
+                            // so Jenkins replaces the ${variables} correctly.
                             bat "npx cucumber-js ${featurePath} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
