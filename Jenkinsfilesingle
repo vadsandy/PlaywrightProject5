@@ -32,10 +32,7 @@ pipeline {
         activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Tags', 
             script: [
                 $class: 'GroovyScript', 
-                script: [
-                    sandbox: true, 
-                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@EXCEL']"
-                ]
+                script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@Excel', '@fireup']"]
             ]
         )
 
@@ -64,12 +61,12 @@ pipeline {
                     script {
                         // 1. Safe Parameter Handling: Use the Elvis operator (?:) 
                         // to provide a fallback if the parameter is null.
-                        def rawSuite = params.SUITE ?: "@Smoke"
+                        def rawSuite = params.TAGS ?: "@fireup"
                         def featurePath = params.FEATURE_FILE ?: "src/features"
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                         // 2. Perform the replaceAll on the safe variable
-                        def tagExpr = rawSuite.replaceAll(',', ' or ')
+                        def tagExpr = rawSuite.replaceAll('&#64;', '@').replaceAll(',', ' or ')
 
                         withEnv([
                             "HEADLESS=${headlessVal}",
