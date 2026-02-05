@@ -62,26 +62,19 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // Decode the &#64; to @ manually just in case
-                        def rawTags = params.TAGS ?: "@UI"
-                        def tagExpression = rawTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        
-                        def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
+                        // Ensure these variables are defined inside the script block
+                        def featurePath = params.FEATURE_FILE ?: 'src/features'
+                        def tagExpr = params.SUITE.replaceAll(',', ' or ')
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                         withEnv([
-                            "TARGET_ENV=" + params.ENVIRONMENT,
-                            "DB_USER=" + U_VAL,
-                            "DB_PASSWORD=" + P_VAL,
-                            "DB_SERVER=localhost",
-                            "DB_NAME=PlaywrightTestData",
-                            "DB_PORT=1433",
-                            "DB_INSTANCE=SQLEXPRESS",
-                            "HEADLESS=" + headlessVal,
-                            "ALLURE_RESULTS_DIR=allure-results"
+                            "HEADLESS=${headlessVal}",
+                            "TARGET_ENV=${params.ENVIRONMENT}",
+                            "DB_USER=${U_VAL}",
+                            "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Agent: \${env.NODE_NAME} | Tags: \${tagExpression} | Headless: \${headlessVal}"
-                            bat "npx cucumber-js \${featureFiles} --tags \"\${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            // CRUCIAL: Use double quotes (") for the bat command, not single quotes (')
+                            bat "npx cucumber-js ${featurePath} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
