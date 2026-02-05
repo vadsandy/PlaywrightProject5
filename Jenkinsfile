@@ -1,28 +1,31 @@
 pipeline {
-    agent { 
-        label 'UI-Agent' // This MUST match the name you gave the node exactly
-    }
+    agent { label 'UI-Agent' }
 
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'], description: 'Target Test Environment')
         
-        activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', description: 'Select Features to Run', 
+        activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', description: 'Select Features', 
             script: [
                 $class: 'GroovyScript', 
                 script: [
                     sandbox: false, 
                     script: """
                         def list = []
-                        // We look exactly where the UI-Agent stores its files
-                        def workspacePath = "C:/JenkinsAgent/workspace/\${env.JOB_NAME}"
-                        def featureDir = new File(workspacePath + "/src/features")
+                        // Look in both the Agent workspace AND the Controller workspace
+                        def possiblePaths = [
+                            "C:/JenkinsAgent/workspace/\${env.JOB_NAME}/src/features",
+                            "C:/ProgramData/Jenkins/.jenkins/workspace/\${env.JOB_NAME}/src/features"
+                        ]
                         
-                        if(featureDir.exists()){
-                            featureDir.eachFile { f -> 
-                                if(f.name.endsWith('.feature')) list.add(f.name) 
+                        possiblePaths.each { path ->
+                            def featureDir = new File(path)
+                            if(featureDir.exists()){
+                                featureDir.eachFile { f -> 
+                                    if(f.name.endsWith('.feature')) list.add(f.name) 
+                                }
                             }
                         }
-                        return list.sort() ?: ["No features found - Run Build #1 to sync"]
+                        return list.unique().sort() ?: ["Click Build once to sync features to Agent"]
                     """
                 ]
             ]
@@ -31,11 +34,14 @@ pipeline {
         activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Tags', 
             script: [
                 $class: 'GroovyScript', 
-                script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION']"]
+                script: [
+                    sandbox: true, 
+                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@EXCEL']"
+                ]
             ]
         )
 
-        booleanParam(name: 'HEADLESS_MODE', defaultValue: false, description: 'Uncheck to see browser (Default is OFF for debugging)')
+        booleanParam(name: 'HEADLESS_MODE', defaultValue: false, description: 'Uncheck to see browser')
     }
 
     stages {
@@ -45,22 +51,24 @@ pipeline {
                 bat 'if exist reports rmdir /s /q reports && mkdir reports'
             }
         }
+
         stage('Install') {
             steps {
                 bat 'npm install'
             }
         }
+
         stage('Execute Tests') {
             steps {
                 withCredentials([
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        def selectedTags = params.TAGS ?: "@UI"
-                        def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
+                        // Decode the &#64; to @ manually just in case
+                        def rawTags = params.TAGS ?: "@UI"
+                        def tagExpression = rawTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         
-                        // IMPORTANT: Force the value to false if unchecked
+                        def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                         withEnv([
@@ -72,16 +80,20 @@ pipeline {
                             "DB_PORT=1433",
                             "DB_INSTANCE=SQLEXPRESS",
                             "HEADLESS=" + headlessVal,
-                            "BROWSER=chromium",
                             "ALLURE_RESULTS_DIR=allure-results"
                         ]) {
-                            echo "RUNNING ON NODE: ${env.NODE_NAME} | HEADLESS: ${headlessVal}"
-                            bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            echo "Agent: \${env.NODE_NAME} | Tags: \${tagExpression} | Headless: \${headlessVal}"
+                            bat "npx cucumber-js \${featureFiles} --tags \"\${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
             }
         }
     }
-    post { always { allure results: [[path: 'allure-results']] } }
+
+    post {
+        always {
+            allure results: [[path: 'allure-results']]
+        }
+    }
 }
