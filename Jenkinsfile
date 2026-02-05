@@ -11,21 +11,21 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // Look in both the Agent workspace AND the Controller workspace
-                        def possiblePaths = [
-                            "C:/JenkinsAgent/workspace/\${env.JOB_NAME}/src/features",
-                            "C:/ProgramData/Jenkins/.jenkins/workspace/\${env.JOB_NAME}/src/features"
-                        ]
+                        // Use the built-in Jenkins variable for the current job's workspace
+                        def workspace = jenkins.model.Jenkins.instance.getItem(env.JOB_NAME).lastBuild.workspace
                         
-                        possiblePaths.each { path ->
-                            def featureDir = new File(path)
-                            if(featureDir.exists()){
-                                featureDir.eachFile { f -> 
-                                    if(f.name.endsWith('.feature')) list.add(f.name) 
+                        if (workspace != null && workspace.exists()) {
+                            // This finds all .feature files inside src/features/
+                            def featurePath = workspace.child("src/features")
+                            if (featurePath.exists()) {
+                                featurePath.list().each { file ->
+                                    if (file.name.endsWith(".feature")) {
+                                        list.add(file.name)
+                                    }
                                 }
                             }
                         }
-                        return list.unique().sort() ?: ["Click Build once to sync features to Agent"]
+                        return list.sort() ?: ["No features found - Run Build #1 to sync code"]
                     """
                 ]
             ]
