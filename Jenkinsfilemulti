@@ -2,39 +2,50 @@ pipeline {
     agent { label 'UI-Agent' }
 
     parameters {
-        // We removed 'pattern', 'fileFilter', and 'useRepository' 
-        // to stop the compilation errors.
+        // FIXED: Explicitly forcing PT_FILE and removing branch filters
         gitParameter(
             name: 'SELECTED_FEATURE', 
             type: 'PT_FILE', 
             defaultValue: 'src/features/login.feature',
-            description: 'Select the feature file'
+            sortMode: 'ASCENDING_SMART',
+            description: 'SELECT A .FEATURE FILE (Not a branch!)'
         )
 
         choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
-        
-        // Production is first = Default
         choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
-        
         booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
     }
 
     stages {
         stage('Cleanup & Install') {
             steps {
-                // This fixes the "Placeholder" error you had earlier
+                // Clear old results to ensure a fresh report
+                bat 'if exist allure-results rmdir /s /q allure-results'
                 bat 'npm install'
             }
         }
 
         stage('Run Tests') {
             steps {
-                script {
-                    def headlessVal = params.HEADLESS_MODE ? "true" : "false"
-                    withEnv(["HEADLESS=${headlessVal}", "TARGET_ENV=${params.ENVIRONMENT}"]) {
-                        echo "Executing: ${params.SELECTED_FEATURE}"
-                        // Use the SELECTED_FEATURE from the dropdown
-                        bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${params.TAGS}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                // FIXED: This block maps your Jenkins credentials to the ENV variables
+                withCredentials([
+                    usernamePassword(credentialsId: 'db_credentials', 
+                                     usernameVariable: 'DB_USER_VAL', 
+                                     passwordVariable: 'DB_PASS_VAL')
+                ]) {
+                    script {
+                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
+                        
+                        withEnv([
+                            "HEADLESS=${headlessVal}", 
+                            "TARGET_ENV=${params.ENVIRONMENT}",
+                            "DB_USER=${DB_USER_VAL}", 
+                            "DB_PASSWORD=${DB_PASS_VAL}"
+                        ]) {
+                            // Ensure we are passing a file path, not a branch string
+                            echo "Running Feature: ${params.SELECTED_FEATURE}"
+                            bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${params.TAGS}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                        }
                     }
                 }
             }
