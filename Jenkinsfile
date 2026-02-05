@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent { 
+        label 'UI-Agent' // This MUST match the name you gave the node exactly
+    }
 
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'], description: 'Target Test Environment')
@@ -11,16 +13,21 @@ pipeline {
                     sandbox: false, 
                     script: """
                         def list = []
-                        // This path changes because we are now using a dedicated Agent folder
-                        def workspacePath = "C:/JenkinsAgent/workspace/\${env.JOB_NAME}"
-                        def featureDir = new File(workspacePath + "/src/features")
+                        // This logic checks BOTH possible workspace locations
+                        def paths = [
+                            "C:/JenkinsAgent/workspace/\${env.JOB_NAME}/src/features",
+                            "C:/ProgramData/Jenkins/.jenkins/workspace/\${env.JOB_NAME}/src/features"
+                        ]
                         
-                        if(featureDir.exists()){
-                            featureDir.eachFile { f -> 
-                                if(f.name.endsWith('.feature')) list.add(f.name) 
+                        paths.each { path ->
+                            def featureDir = new File(path)
+                            if(featureDir.exists()){
+                                featureDir.eachFile { f -> 
+                                    if(f.name.endsWith('.feature')) list.add(f.name) 
+                                }
                             }
                         }
-                        return list.sort() ?: ["No features found - Run build once to sync code"]
+                        return list.unique().sort() ?: ["No features found - Run build once"]
                     """
                 ]
             ]
@@ -33,43 +40,34 @@ pipeline {
             ]
         )
 
-        booleanParam(name: 'HEADLESS_MODE', defaultValue: true, description: 'Run Headless (Uncheck to see browser)')
+        booleanParam(name: 'HEADLESS_MODE', defaultValue: false, description: 'Uncheck to see browser (Default is OFF for debugging)')
     }
 
     stages {
         stage('Cleanup') {
             steps {
-                echo "Cleaning up results directory..."
-                bat """
-                    if exist allure-results rmdir /s /q allure-results
-                    if exist reports rmdir /s /q reports
-                    mkdir allure-results
-                    mkdir reports
-                """
+                bat 'if exist allure-results del /q allure-results\\*'
+                bat 'if exist reports rmdir /s /q reports && mkdir reports'
             }
         }
-
         stage('Install') {
             steps {
                 bat 'npm install'
             }
         }
-
         stage('Execute Tests') {
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'db_credentials', 
-                                     usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
+                    usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
                         def selectedTags = params.TAGS ?: "@UI"
-                        //def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        def tagExpression = (params.TAGS ?: "@UI").replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
                         
+                        // IMPORTANT: Force the value to false if unchecked
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
-                        // ALLURE_RESULTS_DIR tells the reporter exactly where to save JSON files
                         withEnv([
                             "TARGET_ENV=" + params.ENVIRONMENT,
                             "DB_USER=" + U_VAL,
@@ -82,7 +80,7 @@ pipeline {
                             "BROWSER=chromium",
                             "ALLURE_RESULTS_DIR=allure-results"
                         ]) {
-                            echo "Running ${featureFiles} | Headless: ${headlessVal}"
+                            echo "RUNNING ON NODE: ${env.NODE_NAME} | HEADLESS: ${headlessVal}"
                             bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
@@ -90,10 +88,5 @@ pipeline {
             }
         }
     }
-
-    post {
-        always {
-            allure results: [[path: 'allure-results']]
-        }
-    }
+    post { always { allure results: [[path: 'allure-results']] } }
 }
