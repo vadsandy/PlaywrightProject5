@@ -2,19 +2,18 @@ pipeline {
     agent { label 'UI-Agent' }
 
     parameters {
+
+            choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
             gitParameter(
-                name: 'SELECTED_FEATURE', 
+                name: 'FEATURE_FILES', 
                 type: 'PT_FILE', 
-                // DO NOT put 'src/features' here. Use the variable below:
-                branch: "${env.BRANCH_NAME}", 
-                // This 'useRepository' is the fix for the red "null" error in your screenshot
-                useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
                 sortMode: 'ASCENDING_SMART',
-                defaultValue: 'src/features/login.feature',
-                description: 'Select the feature file'
+                defaultValue: 'src/features',
+                useRepository: 'https://github.com/vadsandy/PlaywrightProject5.git',
+                description: 'Select/Deselect files. Cucumber will only run those with the tag selected above.'
             )
             
-            choice(name: 'TAGS', choices: ['@UI', '@SMOKE', '@SQL', '@REGRESSION'])
+            
             choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
             booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
         }
