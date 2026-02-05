@@ -1,52 +1,27 @@
 pipeline {
-    agent any
+    agent { label 'UI-Agent' }
 
     parameters {
-        choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'], description: 'Target Test Environment')
-        
-        activeChoice(name: 'FEATURES', choiceType: 'PT_CHECKBOX', description: 'Select Features to Run', 
-            script: [
-                $class: 'GroovyScript', 
-                script: [
-                    sandbox: false, 
-                    script: """
-                        def list = []
-                        def workspacePath = "C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"
-                        def featureDir = new File(workspacePath + "/src/features")
-                        if(featureDir.exists()){
-                            featureDir.eachFile { f -> if(f.name.endsWith('.feature')) list.add(f.name) }
-                        }
-                        return list.sort() ?: ["No features found"]
-                    """
-                ]
-            ]
-        )
-
-        activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Tags', 
-            script: [
-                $class: 'GroovyScript', 
-                script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION']"]
-            ]
-        )
-
-        booleanParam(name: 'HEADLESS_MODE', defaultValue: true, description: 'Run Headless (Uncheck to see browser)')
+        // Defined clearly so the script can find them without 'null' errors
+        choice(name: 'TAG_SELECTION', choices: ['@fireup', '@Excel', '@JSON' '@SQL', '@Smoke', '@UI', '@Regression'], description: 'Select the test suite tag')
+        choice(name: 'FEATURE_PATH', choices: ['src/features', 'src/features/login.feature'], description: 'Select execution scope')
+        choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'], description: 'Target Environment')
+        booleanParam(name: 'HEADLESS_MODE', defaultValue: false, description: 'Run browser in headless mode')
     }
 
     stages {
         stage('Cleanup') {
             steps {
-                echo "Cleaning up results directory..."
-                bat """
-                    if exist allure-results rmdir /s /q allure-results
-                    if exist reports rmdir /s /q reports
-                    mkdir allure-results
-                    mkdir reports
-                """
+                echo "Cleaning up old results..."
+                // Using /q for quiet and checking existence to prevent build breaks
+                bat 'if exist allure-results del /q allure-results\\*'
+                bat 'if exist reports rmdir /s /q reports && mkdir reports'
             }
         }
 
         stage('Install') {
             steps {
+                echo "Syncing dependencies..."
                 bat 'npm install'
             }
         }
@@ -54,31 +29,29 @@ pipeline {
         stage('Execute Tests') {
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'db_credentials', 
-                                     usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
+                    usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        def selectedTags = params.TAGS ?: "@UI"
-                        def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        def featureFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
-                        
-                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
+                        // 1. Resolve variables safely
+                        def selectedTag = params.TAG_SELECTION ?: "@Smoke"
+                        def selectedFeature = params.FEATURE_PATH ?: "src/features"
+                        def isHeadless = params.HEADLESS_MODE ? "true" : "false"
 
-                        // ALLURE_RESULTS_DIR tells the reporter exactly where to save JSON files
+                        // 2. Wrap execution in withEnv to avoid "Groovy String Interpolation" security warnings
                         withEnv([
-                            "TARGET_ENV=" + params.ENVIRONMENT,
-                            "DB_USER=" + U_VAL,
-                            "DB_PASSWORD=" + P_VAL,
-                            "DB_SERVER=localhost",
-                            "DB_NAME=PlaywrightTestData",
-                            "DB_PORT=1433",
-                            "DB_INSTANCE=SQLEXPRESS",
-                            "HEADLESS=" + headlessVal,
-                            "BROWSER=chromium",
-                            "ALLURE_RESULTS_DIR=allure-results"
+                            "HEADLESS=${isHeadless}",
+                            "TARGET_ENV=${params.ENVIRONMENT}",
+                            "DB_USER=${U_VAL}",
+                            "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Running ${featureFiles} | Headless: ${headlessVal}"
-                            bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            echo "--- EXECUTION DETAILS ---"
+                            echo "Agent: ${env.NODE_NAME}"
+                            echo "Feature Scope: ${selectedFeature}"
+                            echo "Tag Filter: ${selectedTag}"
+                            echo "-------------------------"
+
+                            // 3. The Command: Double quotes around the whole string are REQUIRED for ${} to work
+                            bat "npx cucumber-js ${selectedFeature} --tags \"${selectedTag}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
@@ -88,6 +61,7 @@ pipeline {
 
     post {
         always {
+            echo "Generating Allure Report..."
             allure results: [[path: 'allure-results']]
         }
     }
