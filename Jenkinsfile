@@ -8,20 +8,19 @@ pipeline {
             script: [
                 $class: 'GroovyScript', 
                 script: [
-                    sandbox: false, // MANDATORY: Uncheck the Sandbox box in the UI as well
+                    sandbox: false, 
                     script: """
-                        import groovy.io.FileType
                         def list = []
-                        // Get the absolute workspace path for this specific job
-                        def workspacePath = jenkins.model.Jenkins.instance.getJob(env.JOB_NAME).lastBuild.workspace.remote
+                        // Use the direct absolute path for your specific job workspace
+                        def workspacePath = "C:/ProgramData/Jenkins/.jenkins/workspace/Playwright-Automation-Dev"
                         def featureDir = new File(workspacePath + "/src/features")
                         
                         if(featureDir.exists()){
-                            featureDir.eachFile(FileType.FILES) { f -> 
+                            featureDir.eachFile { f -> 
                                 if(f.name.endsWith('.feature')) list.add(f.name) 
                             }
                         }
-                        return list.sort() ?: ["No features found - Ensure Build #1 ran to sync code"]
+                        return list.sort() ?: ["No features found - Run build once to sync code"]
                     """
                 ]
             ]
@@ -61,6 +60,8 @@ pipeline {
                     script {
                         def selectedTags = params.TAGS ?: "@UI"
                         def tagExpression = selectedTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        
+                        // Feature selection logic
                         def featurePath = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/" + it }.join(' ') : "src/features/*.feature"
 
                         withEnv([
@@ -72,6 +73,7 @@ pipeline {
                             "DB_PORT=1433",
                             "DB_INSTANCE=SQLEXPRESS"
                         ]) {
+                            // Ensure the command uses the dynamically built featurePath
                             bat "npx cucumber-js ${featurePath} --tags \"${tagExpression}\" --format progress || exit 0"
                         }
                     }
