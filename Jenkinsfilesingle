@@ -62,14 +62,21 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Safe Parameter Handling: Use the Elvis operator (?:) 
-                        // to provide a fallback if the parameter is null.
-                        def rawSuite = params.TAGS ?: "@fireup"
-                        def featurePath = params.FEATURES ? "src/features/${params.FEATURES}" : "src/features"
-                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
+                        // 1. Clean the tags
+                        def rawTags = params.TAGS ?: "@fireup"
+                        def tagExpr = rawTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
 
-                        // 2. Perform the replaceAll on the safe variable
-                        def tagExpr = rawSuite.replaceAll('&#64;', '@').replaceAll(',', ' or ')
+                        // 2. Fix the Feature Selection logic
+                        // If FEATURES is selected, point to the specific file. If not, run the whole folder.
+                        def selectedFiles = ""
+                        if (params.FEATURES) {
+                            // Split by comma in case multiple checkboxes are picked
+                            selectedFiles = params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ')
+                        } else {
+                            selectedFiles = "src/features/"
+                        }
+
+                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
                         withEnv([
                             "HEADLESS=${headlessVal}",
@@ -77,11 +84,11 @@ pipeline {
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Executing: ${featurePath} with tags: ${tagExpr}"
+                            echo "Running Files: ${selectedFiles}"
+                            echo "Filtering by Tags: ${tagExpr}"
                             
-                            // 3. CRITICAL: Use Double Quotes (") for the whole string 
-                            // so Jenkins replaces the ${variables} correctly.
-                            bat "npx cucumber-js ${featurePath} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            // Use the specific file paths and the tags together
+                            bat "npx cucumber-js ${selectedFiles} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
