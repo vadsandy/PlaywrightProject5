@@ -78,7 +78,7 @@ pipeline {
                             "ALLURE_RESULTS_DIR=allure-results"
                         ]) {
                             echo "Running ${featureFiles} | Headless: ${headlessVal}"
-                            bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress || exit 0"
+                            bat "npx cucumber-js ${featureFiles} --tags \"${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
