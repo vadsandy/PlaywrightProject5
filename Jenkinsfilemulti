@@ -7,8 +7,8 @@ pipeline {
             type: 'PT_FILE', 
             sortMode: 'ASCENDING_SMART',
             defaultValue: 'src/features/login.feature',
-            // Use 'pattern' or 'fileFilter' based on what your UI accepted last
-            fileFilter: 'src/features/.*\\.feature', 
+            // Changed from fileFilter to pattern, which is more universal
+            pattern: 'src/features/.*\\.feature', 
             description: 'Select the feature file'
         )
 
@@ -18,13 +18,21 @@ pipeline {
             description: 'Select test tags'
         )
 
-        // Production is now first = Default
+        // Production is now the first option (Default)
         choice(name: 'ENVIRONMENT', choices: ['Production', 'QA', 'Staging'])
         
         booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
     }
 
     stages {
+        stage('Install Dependencies') {
+            steps {
+                echo "Installing npm packages on Agent..."
+                // This ensures npx cucumber-js actually works
+                bat 'npm install'
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 script {
@@ -32,14 +40,17 @@ pipeline {
 
                     withEnv(["HEADLESS=${headlessVal}", "TARGET_ENV=${params.ENVIRONMENT}"]) {
                         echo "Executing: ${params.SELECTED_FEATURE}"
+                        // Using 'call' or direct path can sometimes help if npx still acts up
                         bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${params.TAGS}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                     }
                 }
             }
         }
     }
+    
     post {
         always {
+            // This will now find results because npm install made the tests run
             allure results: [[path: 'allure-results']]
         }
     }
