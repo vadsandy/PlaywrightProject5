@@ -1,7 +1,9 @@
 pipeline {
+    // This ensures tests run on your local Agent so the browser pops up
     agent { label 'UI-Agent' }
 
     parameters {
+dev-test
         // Defined clearly so the script can find them without 'null' errors
         choice(name: 'TAG_SELECTION', choices: ['@SQL', '@Smoke', '@UI', '@Regression'], description: 'Select the test suite tag')
         choice(name: 'FEATURE_PATH', choices: ['src/features', 'src/features/login.feature'], description: 'Select execution scope')
@@ -22,12 +24,41 @@ pipeline {
         stage('Install') {
             steps {
                 echo "Syncing dependencies..."
+
+        // DYNAMIC FEATURE LIST: Scans the branch you are currently on for .feature files
+        gitParameter(
+            name: 'SELECTED_FEATURE', 
+            type: 'PT_FILE', 
+            fileFilter: 'src/features/.*\\.feature', 
+            defaultValue: 'src/features/login.feature',
+            description: 'Select the feature file to run from this branch'
+        )
+
+        // CHECKBOX TAGS: Allows selecting multiple tags
+        extendedChoice(
+            name: 'TAGS', 
+            type: 'PT_CHECKBOX', 
+            value: '@UI,@SMOKE,@SQL,@REGRESSION', 
+            defaultValue: '@UI',
+            description: 'Select test tags'
+        )
+
+        choice(name: 'ENVIRONMENT', choices: ['QA', 'Staging', 'Production'])
+        booleanParam(name: 'HEADLESS_MODE', defaultValue: false)
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                echo "Branch detected: ${env.BRANCH_NAME}"
+ main
                 bat 'npm install'
             }
         }
 
         stage('Execute Tests') {
             steps {
+ dev-test
                 withCredentials([
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
@@ -52,6 +83,27 @@ pipeline {
 
                             // 3. The Command: Double quotes around the whole string are REQUIRED for ${} to work
                             bat "npx cucumber-js ${selectedFeature} --tags \"${selectedTag}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+
+                script {
+                    // Convert checkbox commas to 'or' for Cucumber
+                    def tagExpression = params.TAGS.replaceAll(',', ' or ')
+                    def headlessVal = params.HEADLESS_MODE ? "true" : "false"
+
+                    withCredentials([
+                        usernamePassword(credentialsId: 'db_credentials', 
+                                         usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
+                    ]) {
+                        withEnv([
+                            "HEADLESS=${headlessVal}",
+                            "TARGET_ENV=${params.ENVIRONMENT}",
+                            "DB_USER=${U_VAL}",
+                            "DB_PASSWORD=${P_VAL}",
+                            "ALLURE_RESULTS_DIR=allure-results"
+                        ]) {
+                            echo "Running ${params.SELECTED_FEATURE} with tags ${tagExpression}"
+                            // Execution command
+                            bat "npx cucumber-js ${params.SELECTED_FEATURE} --tags \"${tagExpression}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+ main
                         }
                     }
                 }

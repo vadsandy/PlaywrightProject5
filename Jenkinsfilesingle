@@ -42,6 +42,8 @@ pipeline {
     stages {
         stage('Cleanup') {
             steps {
+                echo "Cleaning up old results..."
+                // Using /q for quiet and checking existence to prevent build breaks
                 bat 'if exist allure-results del /q allure-results\\*'
                 bat 'if exist reports rmdir /s /q reports && mkdir reports'
             }
@@ -49,6 +51,7 @@ pipeline {
 
         stage('Install') {
             steps {
+                echo "Syncing dependencies..."
                 bat 'npm install'
             }
         }
@@ -68,17 +71,21 @@ pipeline {
                         // 2. Perform the replaceAll on the safe variable
                         def tagExpr = rawSuite.replaceAll('&#64;', '@').replaceAll(',', ' or ')
 
+                        // 2. Wrap execution in withEnv to avoid "Groovy String Interpolation" security warnings
                         withEnv([
-                            "HEADLESS=${headlessVal}",
-                            "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
+                            "HEADLESS=${isHeadless}",
+                            "TARGET_ENV=${params.ENVIRONMENT}",
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Executing: ${featurePath} with tags: ${tagExpr}"
-                            
-                            // 3. CRITICAL: Use Double Quotes (") for the whole string 
-                            // so Jenkins replaces the ${variables} correctly.
-                            bat "npx cucumber-js ${featurePath} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            echo "--- EXECUTION DETAILS ---"
+                            echo "Agent: ${env.NODE_NAME}"
+                            echo "Feature Scope: ${selectedFeature}"
+                            echo "Tag Filter: ${selectedTag}"
+                            echo "-------------------------"
+
+                            // 3. The Command: Double quotes around the whole string are REQUIRED for ${} to work
+                            bat "npx cucumber-js ${selectedFeature} --tags \"${selectedTag}\" --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
@@ -88,6 +95,7 @@ pipeline {
 
     post {
         always {
+            echo "Generating Allure Report..."
             allure results: [[path: 'allure-results']]
         }
     }
