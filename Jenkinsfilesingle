@@ -70,7 +70,8 @@ pipeline {
 
                         def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
                         if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
-                        cucumberCmd += " --format progress --format allure-cucumberjs/reporter"
+                        //cucumberCmd += " --format progress --format allure-cucumberjs/reporter"
+                        cucumberCmd += " --format summary"
 
                         // ONE SINGLE LINE: No spaces around && and no carets (^)
                         bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} || exit 0"

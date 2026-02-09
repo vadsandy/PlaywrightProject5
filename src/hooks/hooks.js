@@ -10,14 +10,15 @@ setDefaultTimeout(60 * 1000);
 BeforeAll(async function() {
     const browserType = process.env.BROWSER || 'chromium';
     
-    // The .trim() removes any accidental spaces passed by Jenkins/Batch
-    const rawVal = (process.env.HEADLESS || '').trim().toLowerCase();
-    const isHeadless = rawVal === 'true';
+    // REGEX FIX: This catches 'true', 'true ', 'TRUE', etc.
+    const headlessEnv = String(process.env.HEADLESS); 
+    const isHeadless = /true/i.test(headlessEnv);
 
-    console.log(`🚀 Browser: ${browserType} | Headless Mode: ${isHeadless}`);
+    // If you want to force it for a single run to test:
+    // const isHeadless = true; 
 
     browser = await playwright[browserType].launch({
-        headless: isHeadless, 
+        headless: isHeadless,
         args: ['--disable-dev-shm-usage', '--no-sandbox']
     });
 });
