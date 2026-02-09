@@ -39,7 +39,7 @@ pipeline {
                     sandbox: true, 
                     // Using a simple list; Jenkins will handle the display. 
                     // If the issue persists, we use the raw strings.
-                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@Excel', '@fireup']"
+                    script: "return ["@UI", "@SMOKE", "@SQL", "@REGRESSION", "@JSON", "@Excel", "@fireup"]"
                 ]
             ]
         )
