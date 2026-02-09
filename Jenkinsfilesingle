@@ -67,7 +67,7 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Tags logic: Don't force @fireup if nothing is selected
+                        // 1. Tags logic
                         def tagExpr = ""
                         if (params.TAGS) {
                             tagExpr = params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ')
@@ -75,21 +75,24 @@ pipeline {
 
                         // 2. File logic
                         def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
+                        
+                        // 3. Command construction
+                        def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
+                        if (tagExpr) {
+                            cucumberCmd += " --tags \"${tagExpr}\""
+                        }
+                        cucumberCmd += " --format progress --format allure-cucumberjs/reporter || exit 0"
 
+                        // 4. Execution with forced Environment Variables
                         withEnv([
                             "HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}",
                             "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
-                            if (tagExpr) {
-                                cucumberCmd += " --tags \"${tagExpr}\""
-                            }
-                            cucumberCmd += " --format progress --format allure-cucumberjs/reporter || exit 0"
-
                             echo "Executing: ${cucumberCmd}"
-                            bat "${cucumberCmd}"
+                            // Use 'set' to force the variable in the Windows CMD session
+                            bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'} && ${cucumberCmd}"
                         }
                     }
                 }

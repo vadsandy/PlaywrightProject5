@@ -8,12 +8,18 @@ let browser;
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
+    // 1. Log exactly what is coming from the environment
+    console.log("--- DEBUG HEADLESS START ---");
+    console.log(`Raw Environment Value: "${process.env.HEADLESS}"`);
+    
     const browserType = process.env.BROWSER || 'chromium';
     
-    // This regex check is the most "bulletproof" way to catch 'true' from Jenkins
-    const isHeadless = /true/i.test((process.env.HEADLESS || 'false').trim());
+    // 2. Use a more aggressive check
+    const rawVal = (process.env.HEADLESS || '').trim().toLowerCase();
+    const isHeadless = rawVal === 'true';
 
-    console.log(`🚀 Launching: ${browserType} | Headless: ${isHeadless}`);
+    console.log(`Evaluated Boolean: ${isHeadless}`);
+    console.log("--- DEBUG HEADLESS END ---");
 
     browser = await playwright[browserType].launch({
         headless: isHeadless,
