@@ -64,25 +64,16 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Logic for tags and files
                         def tagExpr = params.TAGS ? params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ') : ""
                         def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
                         def hless = params.HEADLESS_MODE ? "true" : "false"
 
-                        // 2. Build the command string
                         def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
                         if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
                         cucumberCmd += " --format progress --format allure-cucumberjs/reporter"
 
-                        // 3. THE FIX: Set the variable inside the BAT command itself
-                        // We use TARGET_ENV, DB_USER, etc. directly in the string
-                        bat """
-                        set HEADLESS=${hless}&& ^
-                        set TARGET_ENV=${params.ENVIRONMENT}&& ^
-                        set DB_USER=${U_VAL}&& ^
-                        set DB_PASSWORD=${P_VAL}&& ^
-                        ${cucumberCmd} || exit 0
-                        """
+                        // ONE SINGLE LINE: No spaces around && and no carets (^)
+                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} || exit 0"
                     }
                 }
             }
