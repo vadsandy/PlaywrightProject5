@@ -35,7 +35,12 @@ pipeline {
         activeChoice(name: 'TAGS', choiceType: 'PT_CHECKBOX', description: 'Select Tags', 
             script: [
                 $class: 'GroovyScript', 
-                script: [sandbox: true, script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@Excel', '@fireup']"]
+                script: [
+                    sandbox: true, 
+                    // Using a simple list; Jenkins will handle the display. 
+                    // If the issue persists, we use the raw strings.
+                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@Excel', '@fireup']"
+                ]
             ]
         )
 
@@ -62,31 +67,25 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Handle Tags: If nothing is selected, we leave it empty instead of forcing @fireup
+                        // 1. Tags logic: Don't force @fireup if nothing is selected
                         def tagExpr = ""
                         if (params.TAGS) {
                             tagExpr = params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         }
 
-                        // 2. Handle Files
+                        // 2. File logic
                         def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
 
-                        def headlessVal = params.HEADLESS_MODE ? "true" : "false"
-
                         withEnv([
-                            "HEADLESS=${headlessVal}",
+                            "HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}",
                             "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            // 3. Build the command dynamically
-                            def cucumberCmd = "npx cucumber-js ${selectedFiles}"
-                            
-                            // Only add the --tags flag if tagExpr is not empty
+                            def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
                             if (tagExpr) {
                                 cucumberCmd += " --tags \"${tagExpr}\""
                             }
-                            
                             cucumberCmd += " --format progress --format allure-cucumberjs/reporter || exit 0"
 
                             echo "Executing: ${cucumberCmd}"

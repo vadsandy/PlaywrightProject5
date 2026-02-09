@@ -9,8 +9,9 @@ setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
     const browserType = process.env.BROWSER || 'chromium';
-    const isHeadless = process.env.HEADLESS?.trim() === 'true';
-    console.log(`DEBUG: Launching browser with headless: ${isHeadless} (Type: ${typeof isHeadless})`);
+    
+    // This regex check is the most "bulletproof" way to catch 'true' from Jenkins
+    const isHeadless = /true/i.test((process.env.HEADLESS || 'false').trim());
 
     console.log(`🚀 Launching: ${browserType} | Headless: ${isHeadless}`);
 

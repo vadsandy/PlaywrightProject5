@@ -58,8 +58,8 @@ Then('I should be redirected to the login page', async function () {
     await expect(this.page).toHaveURL(/login/);
 });
 
-Then('I should see the "Login" header to confirm I am out', async function () {
+Then('I should see the "Login" button to confirm I am out', async function () {
     // Checks for the header text 'Login' on the new page
-    const loginHeader = this.page.locator('.main-header'); 
-    await expect(loginHeader).toContainText('Login');
+    //const loginHeader = this.page.locator('.main-header'); 
+    await expect(this.loginPage.loginBtn).toContainText('Login');
 });
