@@ -1,5 +1,8 @@
 module.exports = {
     default: {
+        
+        default: `--require src/step_definitions/*.js --require src/hooks/hooks.js`,
+
         // Path to your feature files
         paths: ['src/features/**/*.feature'],
 

@@ -8,15 +8,13 @@ let browser;
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
+    // HARDCODE TO TRUE - If the browser STILL opens, 
+    // it means Cucumber is NOT reading this file at all.
+    const isHeadless = /true/i.test((process.env.HEADLESS || '').trim());
+
+    console.log("!!! IF YOU SEE THIS, HOOKS IS WORKING !!!");
+
     const browserType = process.env.BROWSER || 'chromium';
-    
-    // REGEX FIX: This catches 'true', 'true ', 'TRUE', etc.
-    const headlessEnv = String(process.env.HEADLESS); 
-    const isHeadless = /true/i.test(headlessEnv);
-
-    // If you want to force it for a single run to test:
-    // const isHeadless = true; 
-
     browser = await playwright[browserType].launch({
         headless: isHeadless,
         args: ['--disable-dev-shm-usage', '--no-sandbox']
