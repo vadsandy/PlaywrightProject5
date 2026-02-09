@@ -64,32 +64,25 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Tags logic
-                        def tagExpr = ""
-                        if (params.TAGS) {
-                            tagExpr = params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ')
-                        }
-
-                        // 2. File logic
+                        // 1. Logic for tags and files
+                        def tagExpr = params.TAGS ? params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ') : ""
                         def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
-                        
-                        // 3. Command construction
-                        def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
-                        if (tagExpr) {
-                            cucumberCmd += " --tags \"${tagExpr}\""
-                        }
-                        cucumberCmd += " --format progress --format allure-cucumberjs/reporter || exit 0"
+                        def hless = params.HEADLESS_MODE ? "true" : "false"
 
-                        // 4. Execution with forced Environment Variables
-                        withEnv([
-                            "HEADLESS=${params.HEADLESS_MODE}", // This passes true/false directly
-                            "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
-                            "DB_USER=${U_VAL}",
-                            "DB_PASSWORD=${P_VAL}"
-                        ]) {
-                            // We run the command directly; hooks.js will now handle the .trim()
-                            bat "npx cucumber-js ${selectedFiles.trim()} ${tagExpr ? '--tags \"' + tagExpr + '\"' : ''} --format progress --format allure-cucumberjs/reporter || exit 0"
-                        }
+                        // 2. Build the command string
+                        def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
+                        if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
+                        cucumberCmd += " --format progress --format allure-cucumberjs/reporter"
+
+                        // 3. THE FIX: Set the variable inside the BAT command itself
+                        // We use TARGET_ENV, DB_USER, etc. directly in the string
+                        bat """
+                        set HEADLESS=${hless}&& ^
+                        set TARGET_ENV=${params.ENVIRONMENT}&& ^
+                        set DB_USER=${U_VAL}&& ^
+                        set DB_PASSWORD=${P_VAL}&& ^
+                        ${cucumberCmd} || exit 0
+                        """
                     }
                 }
             }
