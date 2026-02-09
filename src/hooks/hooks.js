@@ -8,19 +8,15 @@ let browser;
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
-    // 1. Log exactly what is coming from the environment
     console.log("--- DEBUG HEADLESS START ---");
-    console.log(`Raw Environment Value: "${process.env.HEADLESS}"`);
-    
-    const browserType = process.env.BROWSER || 'chromium';
-    
-    // 2. Use a more aggressive check
     const rawVal = (process.env.HEADLESS || '').trim().toLowerCase();
+    console.log(`Raw Value from Env: "${process.env.HEADLESS}"`);
+    
     const isHeadless = rawVal === 'true';
-
     console.log(`Evaluated Boolean: ${isHeadless}`);
     console.log("--- DEBUG HEADLESS END ---");
 
+    const browserType = process.env.BROWSER || 'chromium';
     browser = await playwright[browserType].launch({
         headless: isHeadless,
         args: ['--disable-dev-shm-usage', '--no-sandbox']

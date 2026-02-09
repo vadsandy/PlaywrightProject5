@@ -92,7 +92,7 @@ pipeline {
                         ]) {
                             echo "Executing: ${cucumberCmd}"
                             // Use 'set' to force the variable in the Windows CMD session
-                            bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'} && ${cucumberCmd}"
+                            bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}&&${cucumberCmd}"
                         }
                     }
                 }
