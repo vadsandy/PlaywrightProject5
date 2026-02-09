@@ -8,17 +8,16 @@ let browser;
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
-    console.log("--- DEBUG HEADLESS START ---");
-    const rawVal = (process.env.HEADLESS || '').trim().toLowerCase();
-    console.log(`Raw Value from Env: "${process.env.HEADLESS}"`);
-    
-    const isHeadless = rawVal === 'true';
-    console.log(`Evaluated Boolean: ${isHeadless}`);
-    console.log("--- DEBUG HEADLESS END ---");
-
     const browserType = process.env.BROWSER || 'chromium';
+    
+    // The .trim() removes any accidental spaces passed by Jenkins/Batch
+    const rawVal = (process.env.HEADLESS || '').trim().toLowerCase();
+    const isHeadless = rawVal === 'true';
+
+    console.log(`🚀 Browser: ${browserType} | Headless Mode: ${isHeadless}`);
+
     browser = await playwright[browserType].launch({
-        headless: isHeadless,
+        headless: isHeadless, 
         args: ['--disable-dev-shm-usage', '--no-sandbox']
     });
 });

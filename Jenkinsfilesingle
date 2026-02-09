@@ -37,13 +37,10 @@ pipeline {
                 $class: 'GroovyScript', 
                 script: [
                     sandbox: true, 
-                    // Using a simple list; Jenkins will handle the display. 
-                    // If the issue persists, we use the raw strings.
-                    script: "return ["@UI", "@SMOKE", "@SQL", "@REGRESSION", "@JSON", "@Excel", "@fireup"]"
+                    script: "return ['@UI', '@SMOKE', '@SQL', '@REGRESSION', '@JSON', '@Excel', '@fireup']"
                 ]
             ]
         )
-
         booleanParam(name: 'HEADLESS_MODE', defaultValue: false, description: 'Uncheck to see browser')
     }
 
@@ -85,14 +82,13 @@ pipeline {
 
                         // 4. Execution with forced Environment Variables
                         withEnv([
-                            "HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}",
+                            "HEADLESS=${params.HEADLESS_MODE}", // This passes true/false directly
                             "TARGET_ENV=${params.ENVIRONMENT ?: 'Production'}",
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Executing: ${cucumberCmd}"
-                            // Use 'set' to force the variable in the Windows CMD session
-                            bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}&&${cucumberCmd}"
+                            // We run the command directly; hooks.js will now handle the .trim()
+                            bat "npx cucumber-js ${selectedFiles.trim()} ${tagExpr ? '--tags \"' + tagExpr + '\"' : ''} --format progress --format allure-cucumberjs/reporter || exit 0"
                         }
                     }
                 }
