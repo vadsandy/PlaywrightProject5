@@ -62,19 +62,14 @@ pipeline {
                     usernamePassword(credentialsId: 'db_credentials', usernameVariable: 'U_VAL', passwordVariable: 'P_VAL')
                 ]) {
                     script {
-                        // 1. Clean the tags
-                        def rawTags = params.TAGS ?: "@fireup"
-                        def tagExpr = rawTags.replaceAll('&#64;', '@').replaceAll(',', ' or ')
-
-                        // 2. Fix the Feature Selection logic
-                        // If FEATURES is selected, point to the specific file. If not, run the whole folder.
-                        def selectedFiles = ""
-                        if (params.FEATURES) {
-                            // Split by comma in case multiple checkboxes are picked
-                            selectedFiles = params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ')
-                        } else {
-                            selectedFiles = "src/features/"
+                        // 1. Handle Tags: If nothing is selected, we leave it empty instead of forcing @fireup
+                        def tagExpr = ""
+                        if (params.TAGS) {
+                            tagExpr = params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ')
                         }
+
+                        // 2. Handle Files
+                        def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
 
                         def headlessVal = params.HEADLESS_MODE ? "true" : "false"
 
@@ -84,11 +79,18 @@ pipeline {
                             "DB_USER=${U_VAL}",
                             "DB_PASSWORD=${P_VAL}"
                         ]) {
-                            echo "Running Files: ${selectedFiles}"
-                            echo "Filtering by Tags: ${tagExpr}"
+                            // 3. Build the command dynamically
+                            def cucumberCmd = "npx cucumber-js ${selectedFiles}"
                             
-                            // Use the specific file paths and the tags together
-                            bat "npx cucumber-js ${selectedFiles} --tags \"${tagExpr}\" --format progress --format allure-cucumberjs/reporter || exit 0"
+                            // Only add the --tags flag if tagExpr is not empty
+                            if (tagExpr) {
+                                cucumberCmd += " --tags \"${tagExpr}\""
+                            }
+                            
+                            cucumberCmd += " --format progress --format allure-cucumberjs/reporter || exit 0"
+
+                            echo "Executing: ${cucumberCmd}"
+                            bat "${cucumberCmd}"
                         }
                     }
                 }
