@@ -65,23 +65,20 @@ pipeline {
                 ]) {
                     script {
                         def tagExpr = params.TAGS ? params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ') : ""
-                        
-                        // 1. Improved File Logic: Only default to folder if NO tags and NO features are selected
                         def selectedFiles = ""
-                        if (params.FEATURES) {
+
+                        // If a specific feature is chosen, ONLY run that file
+                        if (params.FEATURES && params.FEATURES != "All") {
                             selectedFiles = params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ')
-                        } else if (!tagExpr) {
+                        } else {
                             selectedFiles = "src/features/"
                         }
 
-                        def hless = params.HEADLESS_MODE ? "true" : "false"
+                        // Combine Tag and File logic
                         def cucumberCmd = "npx cucumber-js ${selectedFiles} --require src/hooks/hooks.js --require src/step_definitions/*.js"
-                        
-                        if (tagExpr) { 
-                            cucumberCmd += " --tags \"${tagExpr}\"" 
-                        }
+                        if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
 
-                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} --format summary --format allure-cucumberjs/reporter || exit 0"
+                        bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} --format summary --format allure-cucumberjs/reporter || exit 0"
                     }
                 }
             }
