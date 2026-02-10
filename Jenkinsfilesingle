@@ -76,7 +76,7 @@ pipeline {
                         cucumberCmd += " --format summary --format allure-cucumberjs/reporter || exit 0"
 
                         // Single line 'set' to avoid Windows Batch errors
-                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd}"
+                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&npx cucumber-js ${selectedFiles.trim()} --require src/hooks/hooks.js --require src/step_definitions/*.js --tags \"${tagExpr}\" --format summary --format allure-cucumberjs/reporter || exit 0"
                     }
                 }
             }

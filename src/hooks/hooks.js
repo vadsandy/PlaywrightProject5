@@ -8,15 +8,12 @@ let browser;
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
-    // HARDCODE TO TRUE - If the browser STILL opens, 
-    // it means Cucumber is NOT reading this file at all.
-    const isHeadless = /true/i.test((process.env.HEADLESS || '').trim());
-
-    console.log("!!! IF YOU SEE THIS, HOOKS IS WORKING !!!");
+    // This converts the string "true" (with any spaces) into a real boolean true
+    const isHeadless = /true/i.test((process.env.HEADLESS || 'false').trim());
 
     const browserType = process.env.BROWSER || 'chromium';
     browser = await playwright[browserType].launch({
-        headless: isHeadless,
+        headless: isHeadless, // Now this is a real boolean!
         args: ['--disable-dev-shm-usage', '--no-sandbox']
     });
 });

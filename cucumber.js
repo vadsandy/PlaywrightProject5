@@ -1,24 +1,16 @@
 module.exports = {
     default: {
-        
-        default: `--require src/step_definitions/*.js --require src/hooks/hooks.js`,
-
-        // Path to your feature files
+        // This 'require' array is what Cucumber actually looks at
+        require: [
+            'src/step_definitions/**/*.js',
+            'src/hooks/hooks.js' // Added explicitly
+        ],
         paths: ['src/features/**/*.feature'],
-
-        // Path to your step definitions and hooks
-        require: ['src/step_definitions/**/*.js', 'src/support/**/*.js'],
-
-        // Formatting for the terminal and Allure
         format: [
             'progress',
             'summary',
-            'json:reports/cucumber_report.json',
-            'html:reports/cucumber-report.html', 
             'allure-cucumberjs/reporter'
         ],
-        // Letting the environment/command line control the output directory 
-        // ensures Jenkins captures the data correctly.
         parallel: 1,
         publishQuiet: true
     }
