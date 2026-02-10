@@ -68,13 +68,15 @@ pipeline {
                         def selectedFiles = params.FEATURES ? params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ') : "src/features/"
                         def hless = params.HEADLESS_MODE ? "true" : "false"
 
-                        def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()}"
+                        // FORCE requiring the hooks file here
+                        def cucumberCmd = "npx cucumber-js ${selectedFiles.trim()} --require src/hooks/hooks.js --require src/step_definitions/*.js"
+                        
                         if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
-                        //cucumberCmd += " --format progress --format allure-cucumberjs/reporter"
-                        cucumberCmd += " --format summary"
+                        
+                        cucumberCmd += " --format summary --format allure-cucumberjs/reporter || exit 0"
 
-                        // ONE SINGLE LINE: No spaces around && and no carets (^)
-                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} || exit 0"
+                        // Single line 'set' to avoid Windows Batch errors
+                        bat "set HEADLESS=${hless}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd}"
                     }
                 }
             }
