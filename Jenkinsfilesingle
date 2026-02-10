@@ -65,20 +65,23 @@ pipeline {
                 ]) {
                     script {
                         def tagExpr = params.TAGS ? params.TAGS.replaceAll('&#64;', '@').replaceAll(',', ' or ') : ""
-                        def selectedFiles = ""
+                        def cucumberCmd = "npx cucumber-js"
 
-                        // If a specific feature is chosen, ONLY run that file
                         if (params.FEATURES && params.FEATURES != "All") {
-                            selectedFiles = params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ')
+                            // If a file is picked, we ignore tags to prevent leakage
+                            def selectedFiles = params.FEATURES.split(',').collect { "src/features/${it}" }.join(' ')
+                            cucumberCmd += " ${selectedFiles}"
+                        } else if (tagExpr) {
+                            // If no file is picked, use tags across the whole folder
+                            cucumberCmd += " src/features/ --tags \"${tagExpr}\""
                         } else {
-                            selectedFiles = "src/features/"
+                            cucumberCmd += " src/features/"
                         }
 
-                        // Combine Tag and File logic
-                        def cucumberCmd = "npx cucumber-js ${selectedFiles} --require src/hooks/hooks.js --require src/step_definitions/*.js"
-                        if (tagExpr) { cucumberCmd += " --tags \"${tagExpr}\"" }
+                        // Always include the required files
+                        cucumberCmd += " --require src/hooks/hooks.js --require src/step_definitions/*.js"
 
-                        bat "set HEADLESS=${params.HEADLESS_MODE ? 'true' : 'false'}&&set TARGET_ENV=${params.ENVIRONMENT}&&set DB_USER=${U_VAL}&&set DB_PASSWORD=${P_VAL}&&${cucumberCmd} --format summary --format allure-cucumberjs/reporter || exit 0"
+                        bat "set HEADLESS=${params.HEADLESS_MODE}&&set TARGET_ENV=${params.ENVIRONMENT}&&${cucumberCmd} --format summary --format allure-cucumberjs/reporter || exit 0"
                     }
                 }
             }

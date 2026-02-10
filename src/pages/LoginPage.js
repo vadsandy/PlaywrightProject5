@@ -16,29 +16,26 @@ class LoginPage {
 
     }
 
-    async navigate() {
-        // 1. Get raw env from process
-        const rawEnv = process.env.TARGET_ENV || 'Production';
-        
-        // 2. Normalize it (e.g., if Jenkins sends 'qa', change to 'QA')
-        // We match it against our keys: Production, QA, Staging
-        let env = 'Production';
-        if (rawEnv.toLowerCase() === 'qa') env = 'QA';
-        if (rawEnv.toLowerCase() === 'staging') env = 'Staging';
-        if (rawEnv.toLowerCase() === 'production') env = 'Production';
+    async navigate(path = '/login') { // Added default parameter 'path'
+            const rawEnv = process.env.TARGET_ENV || 'Production';
+            
+            let env = 'Production';
+            if (rawEnv.toLowerCase() === 'qa') env = 'QA';
+            if (rawEnv.toLowerCase() === 'staging') env = 'Staging';
+            if (rawEnv.toLowerCase() === 'production') env = 'Production';
 
-        // 3. Select the config
-        const config = envConfig[env];
+            const config = envConfig[env];
 
-        if (!config) {
-            throw new Error(`Environment config for "${env}" not found! Check envConfig.js`);
+            if (!config) {
+                throw new Error(`Environment config for "${env}" not found!`);
+            }
+
+            // Dynamic URL construction
+            const targetUrl = `${config.webUrl}${path}`; 
+            console.log(`Navigating to: ${targetUrl} (Environment: ${env})`);
+
+            await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000});
         }
-
-        const targetUrl = `${config.webUrl}/login`;
-        console.log(`Navigating to: ${targetUrl} (Environment: ${env})`);
-
-        await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000});
-    }
 
     // --- Granular Methods (Micro) ---
     async enterUsername(user) {
@@ -64,6 +61,13 @@ class LoginPage {
         await this.enterUsername(user);
         await this.enterPassword(password);
         await this.clickLogin();
+    }
+
+    //Goto login page and login
+    async gotoLoginPageAndLogin(user, password) {
+        await this.navigate();
+        await this.performFullLogin(user, password);
+
     }
 }
 module.exports = {LoginPage};
