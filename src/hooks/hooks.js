@@ -19,16 +19,11 @@ BeforeAll(async function() {
 });
 
 Before(async function (scenario) {
-    // Add these logs here to see them in the Jenkins Console
-    console.log("--- DEBUG START ---");
-    console.log(`HEADLESS Variable: "${process.env.HEADLESS}"`);
-    console.log("--- DEBUG END ---");
-
-    this.context = await browser.newContext({
-        viewport: { width: 1280, height: 720 },
-        // ... rest of your existing context code
-    });
-    this.page = await this.context.newPage();
+    const tags = scenario.pickle.tags.map(t => t.name);
+    if (tags.includes('@SQL')) {
+        // Only then connect to DB
+        await connectToDB();
+    }
 });
 
 After(async function (scenario) {

@@ -2,8 +2,8 @@ const { Given, When, Then } = require('@cucumber/cucumber');
 const { expect } = require('@playwright/test');
 
 // Matches your existing login navigation pattern
-Given('I open the landing page', async function () {
-    await this.page.goto('https://demoqa.com/');
+Given(/^I open the landing page$/, async function () { 
+    await this.page.goto('https://demoqa.com/'); 
 });
 
 When('I click on the {string} tile', async function (tileName) {
