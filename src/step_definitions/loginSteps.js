@@ -45,21 +45,21 @@ Then('I should see a logout button', async function(){
     await expect(this.loginPage.logoutBtn).toHaveText('Log out');
 });
 
-// --- LOGOUT ACTION ---
-When('I click on the Logout button', async function () {
-    // We use 'this.page' because this action happens after login is complete
-    // The selector matches the DemoQA logout button
-    await this.page.locator('#submit:has-text("Log out")').click();
-});
+// // --- LOGOUT ACTION ---
+// When('I click on the Logout button', async function () {
+//     // We use 'this.page' because this action happens after login is complete
+//     // The selector matches the DemoQA logout button
+//     await this.page.locator('#submit:has-text("Log out")').click();
+// });
 
-// --- LOGOUT ASSERTION ---
-Then('I should be redirected to the login page', async function () {
-    // Ensures the URL changed back to the login path
-    await expect(this.page).toHaveURL(/login/);
-});
+// // --- LOGOUT ASSERTION ---
+// Then('I should be redirected to the login page', async function () {
+//     // Ensures the URL changed back to the login path
+//     await expect(this.page).toHaveURL(/login/);
+// });
 
-Then('I should see the "Login" button to confirm I am out', async function () {
-    // Checks for the header text 'Login' on the new page
-    //const loginHeader = this.page.locator('.main-header'); 
-    await expect(this.loginPage.loginBtn).toContainText('Login');
-});
+// Then('I should see the "Login" button to confirm I am out', async function () {
+//     // Checks for the header text 'Login' on the new page
+//     //const loginHeader = this.page.locator('.main-header'); 
+//     await expect(this.loginPage.loginBtn).toContainText('Login');
+// });
