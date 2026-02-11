@@ -16,13 +16,11 @@ Before(async function (scenario) {
     this.context = await browser.newContext();
     this.page = await this.context.newPage();
 
-    // STRICT TAG CHECKING
+    // pickle.tags contains ONLY the tags for the scenario currently running
     const scenarioTags = scenario.pickle.tags.map(t => t.name);
     
-    // Only logs and connects if the SPECIFIC scenario being run has @SQL
     if (scenarioTags.includes('@SQL')) {
         console.log("!!! DATABASE CONTEXT ENABLED: Requested via @SQL tag !!!");
-        // this.db = await DataReader.connect(); 
     }
 });
 

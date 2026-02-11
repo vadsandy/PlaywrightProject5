@@ -3,6 +3,7 @@ const {envConfig} = require('../config/envConfig');
 class LoginPage {
     constructor(page) {
         this.page = page;
+        console.log(`Navigating to...`);
         // Using locator() with CSS IDs is the most reliable way for DemoQA
         this.usernameInput = page.locator('#userName');
         this.passwordInput = page.locator('#password');
@@ -13,6 +14,8 @@ class LoginPage {
         this.logoutBtn = page.getByRole('button', { name: 'Log out' });
         
         this.errorMessage = page.locator('#name')
+
+        
 
     }
 

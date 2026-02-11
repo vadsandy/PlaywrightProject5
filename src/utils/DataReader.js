@@ -4,6 +4,8 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 
+console.log("Database connection requested..."); // ERROR: Move this inside a method
+
 class DataReader {
     static async getJsonData(filePath, key) {
         const fullpath = path.resolve(filePath);
