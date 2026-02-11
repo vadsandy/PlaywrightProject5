@@ -56,6 +56,7 @@ class DataReader {
     }
 
     static async getSqlData(query) {
+        console.log("Database connection requested via DataReader...");
         const config = {
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,

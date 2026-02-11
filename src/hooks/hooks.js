@@ -19,17 +19,15 @@ BeforeAll(async function() {
 });
 
 Before(async function (scenario) {
-    // 1. Create context and page for this specific test
-    this.context = await browser.newContext({
-        recordVideo: { dir: 'reports/videos/' }
-    });
+    this.context = await browser.newContext();
     this.page = await this.context.newPage();
 
-    // 2. Conditional SQL logic
-    const tags = scenario.pickle.tags.map(t => t.name);
-    if (tags.includes('@SQL')) {
+    // scenario.pickle.tags only contains tags for the current running test
+    const scenarioTags = scenario.pickle.tags.map(t => t.name);
+    
+    if (scenarioTags.includes('@SQL')) {
         console.log("Database connection requested via @SQL tag...");
-        // await connectToDB(); // Ensure this function is defined!
+        // Only then do we trigger DB logic
     }
 });
 
