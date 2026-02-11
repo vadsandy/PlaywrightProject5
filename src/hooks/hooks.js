@@ -22,12 +22,12 @@ Before(async function (scenario) {
     this.context = await browser.newContext();
     this.page = await this.context.newPage();
 
-    // scenario.pickle.tags only contains tags for the current running test
+    // Map the tags for the CURRENT scenario only
     const scenarioTags = scenario.pickle.tags.map(t => t.name);
     
+    // Only log if the CURRENT scenario has the tag
     if (scenarioTags.includes('@SQL')) {
         console.log("Database connection requested via @SQL tag...");
-        // Only then do we trigger DB logic
     }
 });
 
